@@ -16,6 +16,8 @@ local event = require("neogit.lib.event")
 ---@field buffer Buffer instance
 ---@field config NeogitConfig
 ---@field root string
+---@field submodules string[] A list with the relative paths to the project's submodules
+---@field parent_repo string? If we are in a submodule, cache the abs path to the parent repo
 ---@field cwd string
 local M = {}
 M.__index = M
@@ -93,6 +95,8 @@ function M:open(kind)
   end
 
   local mappings = config.get_reversed_status_maps()
+  self.submodules = git.submodule.list()
+  self.parent_repo = git.rev_parse.parent_repo()
 
   self.buffer = Buffer.create {
     name = "NeogitStatus",
@@ -170,6 +174,7 @@ function M:open(kind)
         [mappings["Unstage"]]                   = self:_action("n_unstage"),
         [mappings["UnstageStaged"]]             = self:_action("n_unstage_staged"),
         [mappings["GoToFile"]]                  = self:_action("n_goto_file"),
+        [mappings["GoToParentRepo"]]            = self:_action("n_goto_parent_repo"),
         [mappings["TabOpen"]]                   = self:_action("n_tab_open"),
         [mappings["SplitOpen"]]                 = self:_action("n_split_open"),
         [mappings["VSplitOpen"]]                = self:_action("n_vertical_split_open"),

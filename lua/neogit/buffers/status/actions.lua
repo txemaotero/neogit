@@ -1276,6 +1276,34 @@ M.n_unstage_staged = function(self)
   end)
 end
 
+---Returns true if the given abs_path contains a submodule of the current project
+---@param self StatusBuffer
+---@param abs_path string
+---@return boolean
+local function is_submodule(self, abs_path)
+  local dir = require("plenary.path"):new(abs_path)
+  if not dir:exists() or not dir:is_dir() then
+    return false
+  end
+  local rel_path = dir:make_relative(self.cwd)
+  for _, submodule in ipairs(self.submodules) do
+    if submodule == rel_path then
+      return true
+    end
+  end
+  return false
+end
+
+---Opens neogit on the parent repo if any (i.e. if we are in a submodule)
+---@param self StatusBuffer
+M.n_goto_parent_repo = function(self)
+  return function()
+    if self.parent_repo then
+      require("neogit").open { cwd = self.parent_repo }
+    end
+  end
+end
+
 ---@param self StatusBuffer
 ---@return fun(): nil
 M.n_goto_file = function(self)
@@ -1284,6 +1312,11 @@ M.n_goto_file = function(self)
 
     -- Goto FILE
     if item and item.absolute_path then
+      if is_submodule(self, item.absolute_path) then
+        require("neogit").open { cwd = item.absolute_path }
+        return
+      end
+
       local cursor = translate_cursor_location(self, item)
       self:close()
       vim.schedule_wrap(open)("edit", item.absolute_path, cursor)
